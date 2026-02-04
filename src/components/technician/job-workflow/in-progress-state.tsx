@@ -11,7 +11,6 @@ import { formatTime, cn } from "@/lib/utils";
 import {
   Clock,
   Camera,
-  Plus,
   CheckSquare,
   FileText,
   Image as ImageIcon,

@@ -87,3 +87,56 @@ export interface JobWorkflowState {
   technicianNotes: string;
   signature: string | null;
 }
+
+// ---------------------
+// Dispatch Command Center types
+// ---------------------
+
+/** Status vocabulary used on the admin dispatch board */
+export type DispatchStatus =
+  | "draft"
+  | "scheduled"
+  | "en-route"
+  | "in-progress"
+  | "complete"
+  | "cancelled";
+
+/**
+ * A flattened view of a Job optimised for grid rendering.
+ * `scheduledStart` / `scheduledEnd` are real Date objects so the grid can
+ * compute row positions arithmetically rather than parsing "8:00 AM" strings.
+ */
+export interface DispatchJob {
+  id: string;
+  jobNumber: string;
+  status: DispatchStatus;
+  jobType: string;
+  description?: string;
+  /** Duration in minutes – used to compute block height */
+  durationMinutes: number;
+  /** ISO Date objects used for grid positioning */
+  scheduledStart: Date;
+  scheduledEnd: Date;
+  client: ClientInfo;
+  serviceAddress: Job["serviceAddress"];
+  technicianId: string | null;
+  accessNotes?: string;
+  gateCode?: string;
+}
+
+export interface DispatchTechnician {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  color: string; // Hex color used as the column accent
+  avatar?: string;
+}
+
+/** Payload returned by the grid when a drop occurs */
+export interface DropResult {
+  jobId: string;
+  technicianId: string;
+  /** The Date representing the time-slot the card was dropped onto */
+  startTime: Date;
+}

@@ -5,7 +5,7 @@ import { Job } from "@/types/job";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SlideToConfirm } from "@/components/ui/slide-to-confirm";
-import { openMapsApp, formatPhoneNumber } from "@/lib/utils";
+import { openMapsApp } from "@/lib/utils";
 import {
   Phone,
   Navigation,
