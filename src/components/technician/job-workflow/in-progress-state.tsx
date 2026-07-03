@@ -240,9 +240,9 @@ export function InProgressState({
       {/* Sticky Footer with Timer and Complete Button */}
       <div className="sticky bottom-0 bg-background border-t border-border safe-area-bottom">
         {/* Timer */}
-        <div className="flex items-center justify-center gap-2 py-3 bg-violet-50 dark:bg-violet-950/30">
-          <Clock className="h-5 w-5 text-violet-600 dark:text-violet-400" strokeWidth={2.5} />
-          <span className="font-mono text-xl font-bold text-violet-600 dark:text-violet-400">
+        <div className="flex items-center justify-center gap-2 py-3 bg-green-50 dark:bg-green-950/30">
+          <Clock className="h-5 w-5 text-green-600 dark:text-green-400" strokeWidth={2.5} />
+          <span className="font-mono text-xl font-bold text-green-600 dark:text-green-400">
             {formatTime(elapsedSeconds)}
           </span>
         </div>

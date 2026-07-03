@@ -26,10 +26,15 @@ export function formatPhoneNumber(phone: string): string {
 
 export function openMapsApp(address: string): void {
   const encodedAddress = encodeURIComponent(address);
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
 
   if (isIOS) {
     window.open(`maps://maps.apple.com/?daddr=${encodedAddress}`, "_blank");
+  } else if (isAndroid) {
+    // geo: URI opens the native maps app chooser on Android
+    window.open(`geo:0,0?q=${encodedAddress}`, "_blank");
   } else {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`, "_blank");
   }

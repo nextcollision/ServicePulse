@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { DispatchJob } from "@/types/job";
 import { Clock, User, Wrench, GripVertical } from "lucide-react";
@@ -12,16 +11,14 @@ interface UnassignedCardProps {
 }
 
 export function UnassignedCard({ job }: UnassignedCardProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: job.id,
-      data: { job, source: "sidebar" },
-    });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: job.id,
+    data: { job, source: "sidebar" },
+  });
 
+  // DragOverlay renders the moving visual; the source card stays and dims.
   const style: React.CSSProperties = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 100 : "auto",
+    opacity: isDragging ? 0.4 : 1,
   };
 
   const hours = Math.floor(job.durationMinutes / 60);

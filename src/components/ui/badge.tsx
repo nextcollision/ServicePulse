@@ -22,9 +22,9 @@ const badgeVariants = cva(
         "en-route":
           "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
         "in-progress":
-          "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400",
-        complete:
           "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+        complete:
+          "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
         cancelled:
           "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
       },

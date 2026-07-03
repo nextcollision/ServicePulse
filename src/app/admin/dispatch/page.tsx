@@ -5,18 +5,21 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { DispatchJob, DispatchStatus } from "@/types/job";
+import { dispatchTechnicians } from "@/data/dispatch-data";
 import {
-  dispatchTechnicians,
-  scheduledJobs as initialScheduled,
-  unassignedJobs as initialUnassigned,
-} from "@/data/dispatch-data";
-import { updateJobSchedule } from "./actions";
+  useDispatchSchedule,
+  useScheduleMutation,
+  useStatusUpdate,
+  findScheduleConflict,
+  type ScheduleMove,
+} from "@/hooks/use-dispatch-schedule";
 import { slotIndexToTime } from "@/components/dispatch/grid-constants";
 import { TimeGrid } from "@/components/dispatch/time-grid";
 import { UnassignedQueue } from "@/components/dispatch/unassigned-queue";
@@ -25,25 +28,36 @@ import { JobPreviewPopover } from "@/components/dispatch/job-preview-popover";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  AlertTriangle,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Loader2,
   RefreshCw,
   LayoutGrid,
 } from "lucide-react";
 import { format } from "date-fns";
-import { addMinutes } from "date-fns";
 
 // ─── Component ──────────────────────────────
 
 export default function DispatchPage() {
-  // ── State ──
-  const [scheduled, setScheduled] = React.useState<DispatchJob[]>(() => [...initialScheduled]);
-  const [unassigned, setUnassigned] = React.useState<DispatchJob[]>(() => [...initialUnassigned]);
+  // ── Server state (React Query) ──
+  const { data: schedule, isLoading, refetch, isRefetching } = useDispatchSchedule();
+  const scheduleMutation = useScheduleMutation();
+  const updateStatus = useStatusUpdate();
+
+  // ── Local UI state ──
   const [activeJob, setActiveJob] = React.useState<DispatchJob | null>(null);
   const [previewJob, setPreviewJob] = React.useState<DispatchJob | null>(null);
   const [previewPos, setPreviewPos] = React.useState({ x: 0, y: 0 });
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [conflictWarning, setConflictWarning] = React.useState<string | null>(null);
+
+  // Auto-dismiss the conflict banner
+  React.useEffect(() => {
+    if (!conflictWarning) return;
+    const id = setTimeout(() => setConflictWarning(null), 3500);
+    return () => clearTimeout(id);
+  }, [conflictWarning]);
 
   // ── dnd-kit sensors ──
   // PointerSensor with 8px activation distance so clicks don't trigger drags
@@ -56,73 +70,48 @@ export default function DispatchPage() {
   // ── Drag handlers ──
 
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const data = active.data.current as { job: DispatchJob; source: string } | undefined;
+    const data = event.active.data.current as
+      | { job: DispatchJob; source: string }
+      | undefined;
     if (data?.job) {
       setActiveJob(data.job);
-      // Close any open popover
       setPreviewJob(null);
     }
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveJob(null);
 
-    if (!over) return;
+    if (!over || !schedule) return;
 
-    const activeData = active.data.current as { job: DispatchJob; source: string } | undefined;
-    const overData = over.data.current as { technicianId: string; slotIndex: number } | undefined;
+    const activeData = active.data.current as
+      | { job: DispatchJob; source: "sidebar" | "grid" }
+      | undefined;
+    const overData = over.data.current as
+      | { technicianId: string; slotIndex: number }
+      | undefined;
 
     if (!activeData?.job || !overData) return;
 
-    const { job } = activeData;
+    const { job, source } = activeData;
     const { technicianId, slotIndex } = overData;
     const startTime = slotIndexToTime(slotIndex);
 
-    // Optimistic update
-    const updatedJob: DispatchJob = {
-      ...job,
-      technicianId,
-      status: job.status === "draft" ? "scheduled" : job.status,
-      scheduledStart: startTime,
-      scheduledEnd: addMinutes(startTime, job.durationMinutes),
-    };
-
-    if (activeData.source === "sidebar") {
-      // Scenario A: Assigning from sidebar
-      setUnassigned((prev) => prev.filter((j) => j.id !== job.id));
-      setScheduled((prev) => [...prev, updatedJob]);
-    } else {
-      // Scenario B: Rescheduling within the grid
-      setScheduled((prev) =>
-        prev.map((j) => (j.id === job.id ? updatedJob : j)),
+    // Overlap guard: reject drops that collide with an existing block
+    const conflict = findScheduleConflict(schedule, job, technicianId, startTime);
+    if (conflict) {
+      const tech = dispatchTechnicians.find((t) => t.id === technicianId);
+      setConflictWarning(
+        `Can't schedule here — overlaps "${conflict.jobType}" for ${conflict.client.name} on ${tech?.name ?? "this technician"}'s route.`,
       );
+      return;
     }
 
-    // Fire server action (non-blocking)
-    try {
-      const result = await updateJobSchedule({
-        jobId: job.id,
-        technicianId,
-        startTime: startTime.toISOString(),
-      });
-
-      if (!result.success) {
-        console.error("Schedule update failed:", result.error);
-        // Revert on failure
-        if (activeData.source === "sidebar") {
-          setUnassigned((prev) => [...prev, job]);
-          setScheduled((prev) => prev.filter((j) => j.id !== job.id));
-        } else {
-          setScheduled((prev) =>
-            prev.map((j) => (j.id === updatedJob.id ? job : j)),
-          );
-        }
-      }
-    } catch (err) {
-      console.error("Schedule update error:", err);
-    }
+    const move: ScheduleMove = { job, technicianId, startTime, source };
+    scheduleMutation.mutate(move, {
+      onError: (err) => setConflictWarning(err.message),
+    });
   };
 
   // ── Popover handlers ──
@@ -136,23 +125,10 @@ export default function DispatchPage() {
   };
 
   const handleStatusChange = (jobId: string, newStatus: DispatchStatus) => {
-    setScheduled((prev) =>
-      prev.map((j) =>
-        j.id === jobId ? { ...j, status: newStatus } : j,
-      ),
-    );
-    // Update popover's reference to the job
+    updateStatus(jobId, newStatus);
     setPreviewJob((prev) =>
       prev && prev.id === jobId ? { ...prev, status: newStatus } : prev,
     );
-  };
-
-  // ── Refresh (simulated) ──
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setIsRefreshing(false);
   };
 
   const today = new Date();
@@ -186,38 +162,55 @@ export default function DispatchPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
+            onClick={() => refetch()}
+            disabled={isRefetching}
             className="h-8 w-8"
           >
             <RefreshCw
-              className={cn("h-4 w-4", isRefreshing && "animate-spin")}
+              className={cn("h-4 w-4", isRefetching && "animate-spin")}
               strokeWidth={2}
             />
           </Button>
         </div>
       </header>
 
+      {/* ── Conflict warning banner ── */}
+      {conflictWarning && (
+        <div className="shrink-0 flex items-center gap-2 px-4 py-2 bg-amber-100 text-amber-900 border-b border-amber-300 text-sm dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900">
+          <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+          <span>{conflictWarning}</span>
+        </div>
+      )}
+
       {/* ── Main Content: Sidebar + Grid ── */}
       <DndContext
         sensors={sensors}
+        collisionDetection={pointerWithin}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
         <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-[280px] shrink-0">
-            <UnassignedQueue jobs={unassigned} />
-          </div>
+          {isLoading || !schedule ? (
+            <div className="flex flex-1 items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" strokeWidth={2} />
+            </div>
+          ) : (
+            <>
+              {/* Sidebar */}
+              <div className="w-[280px] shrink-0">
+                <UnassignedQueue jobs={schedule.unassigned} />
+              </div>
 
-          {/* Grid */}
-          <div className="flex-1 overflow-hidden">
-            <TimeGrid
-              technicians={dispatchTechnicians}
-              scheduledJobs={scheduled}
-              onJobClick={handleJobClick}
-            />
-          </div>
+              {/* Grid */}
+              <div className="flex-1 overflow-hidden">
+                <TimeGrid
+                  technicians={dispatchTechnicians}
+                  scheduledJobs={schedule.scheduled}
+                  onJobClick={handleJobClick}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Drag overlay — renders the floating card while dragging */}

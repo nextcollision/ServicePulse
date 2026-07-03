@@ -40,11 +40,12 @@ export const dispatchTechnicians: DispatchTechnician[] = [
 // Helper – build a Date for "today at HH:MM"
 // ───────────────────────────────────────────
 
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-
 function todayAt(hour: number, minute: number = 0): Date {
-  return setMinutes(setHours(new Date(today), hour), minute);
+  // Compute "today" at call time rather than module load, so the mock data
+  // doesn't go stale on a long-running server that crosses midnight.
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return setMinutes(setHours(d, hour), minute);
 }
 
 // ───────────────────────────────────────────

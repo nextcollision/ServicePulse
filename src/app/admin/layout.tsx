@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { AdminProviders } from "./providers";
 
 export const metadata: Metadata = {
   title: "ServicePulse - Dispatch Command Center",
@@ -10,5 +11,5 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <AdminProviders>{children}</AdminProviders>;
 }

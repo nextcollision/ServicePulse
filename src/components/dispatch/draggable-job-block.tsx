@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { DispatchJob, DispatchStatus } from "@/types/job";
 import {
@@ -31,11 +30,10 @@ interface DraggableJobBlockProps {
 }
 
 export function DraggableJobBlock({ job, onClick }: DraggableJobBlockProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: job.id,
-      data: { job, source: "grid" },
-    });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: job.id,
+    data: { job, source: "grid" },
+  });
 
   const slotStart = timeToSlotIndex(job.scheduledStart);
   const slotSpan = durationToSlotSpan(job.durationMinutes);
@@ -44,15 +42,16 @@ export function DraggableJobBlock({ job, onClick }: DraggableJobBlockProps) {
   // If the job starts before the visible grid, clamp to 0
   const topOffset = Math.max(0, slotStart) * ROW_HEIGHT_PX;
 
+  // While dragging, DragOverlay renders the moving visual — the source block
+  // stays in place and dims so the user sees where the job came from.
   const style: React.CSSProperties = {
     position: "absolute",
     top: topOffset,
     left: 4,
     right: 4,
     height: blockHeight - 4, // 4px gap
-    zIndex: isDragging ? 50 : 10,
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.7 : 1,
+    zIndex: 10,
+    opacity: isDragging ? 0.3 : 1,
     cursor: isDragging ? "grabbing" : "grab",
   };
 

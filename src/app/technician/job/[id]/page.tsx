@@ -4,7 +4,7 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { MobileLayout } from "@/components/technician/mobile-layout";
 import { JobWorkflow } from "@/components/technician/job-workflow";
-import { getJobById } from "@/data/mock-jobs";
+import { getUnifiedJobById } from "@/data/job-lookup";
 import { Job } from "@/types/job";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
@@ -25,7 +25,7 @@ export default function JobDetailPage() {
 
   React.useEffect(() => {
     const jobId = params.id as string;
-    const foundJob = getJobById(jobId);
+    const foundJob = getUnifiedJobById(jobId);
 
     if (foundJob) {
       setJob(foundJob);
