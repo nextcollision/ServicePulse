@@ -4,15 +4,17 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { WifiOff, CloudOff } from "lucide-react";
 
+function getInitialOnlineState(): boolean {
+  // navigator is unavailable during SSR/static generation; assume online
+  // until the client mounts and the effect below corrects it if needed.
+  return typeof navigator === "undefined" ? true : navigator.onLine;
+}
+
 export function OfflineIndicator() {
-  const [isOnline, setIsOnline] = React.useState(true);
-  const [showBanner, setShowBanner] = React.useState(false);
+  const [isOnline, setIsOnline] = React.useState(getInitialOnlineState);
+  const [showBanner, setShowBanner] = React.useState(() => !getInitialOnlineState());
 
   React.useEffect(() => {
-    // Check initial state
-    setIsOnline(navigator.onLine);
-    setShowBanner(!navigator.onLine);
-
     const handleOnline = () => {
       setIsOnline(true);
       // Show "back online" message briefly

@@ -46,11 +46,15 @@ export function JobWorkflow({ job: initialJob }: JobWorkflowProps) {
     };
   }, [isTimerRunning]);
 
-  // Calculate elapsed time if job was already started
+  // Resume the timer if the job was already started (e.g. navigated back
+  // into an in-progress job). This must stay an effect: it derives from
+  // Date.now(), which is non-deterministic across server/client, so it
+  // can only run safely after the client has mounted.
   React.useEffect(() => {
     if (initialJob.startedAt && !initialJob.completedAt) {
       const startTime = new Date(initialJob.startedAt).getTime();
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- wall-clock-derived value, must not run during SSR
       setElapsedSeconds(elapsed);
       setIsTimerRunning(true);
     }

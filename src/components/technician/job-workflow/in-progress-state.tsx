@@ -43,17 +43,20 @@ export function InProgressState({
   onComplete,
 }: InProgressStateProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [photoUrls, setPhotoUrls] = React.useState<string[]>([]);
 
-  // Create object URLs for local photos
+  // Object URLs are derived directly from localPhotos — no need to mirror
+  // them into state. The effect below only handles browser resource
+  // cleanup (revoking), it doesn't set any state.
+  const photoUrls = React.useMemo(
+    () => localPhotos.map((file) => URL.createObjectURL(file)),
+    [localPhotos],
+  );
+
   React.useEffect(() => {
-    const urls = localPhotos.map((file) => URL.createObjectURL(file));
-    setPhotoUrls(urls);
-
     return () => {
-      urls.forEach((url) => URL.revokeObjectURL(url));
+      photoUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [localPhotos]);
+  }, [photoUrls]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

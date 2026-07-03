@@ -29,25 +29,18 @@ function formatDate(date: Date): string {
 }
 
 export default function TechnicianDashboard() {
-  const [jobs, setJobs] = React.useState<Job[]>([]);
+  const [jobs, setJobs] = React.useState<Job[]>(() =>
+    getTodaysJobs(currentTechnician.id),
+  );
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const greeting = getGreeting();
   const today = new Date();
-
-  const loadJobs = React.useCallback(() => {
-    const todaysJobs = getTodaysJobs(currentTechnician.id);
-    setJobs(todaysJobs);
-  }, []);
-
-  React.useEffect(() => {
-    loadJobs();
-  }, [loadJobs]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 800));
-    loadJobs();
+    setJobs(getTodaysJobs(currentTechnician.id));
     setIsRefreshing(false);
   };
 

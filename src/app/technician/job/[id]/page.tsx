@@ -7,7 +7,6 @@ import { JobWorkflow } from "@/components/technician/job-workflow";
 import { getUnifiedJobById } from "@/data/job-lookup";
 import { Job } from "@/types/job";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
 
 const statusLabels: Record<Job["status"], string> = {
   dispatch: "Scheduled",
@@ -20,28 +19,10 @@ const statusLabels: Record<Job["status"], string> = {
 export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [job, setJob] = React.useState<Job | null>(null);
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    const jobId = params.id as string;
-    const foundJob = getUnifiedJobById(jobId);
-
-    if (foundJob) {
-      setJob(foundJob);
-    }
-    setLoading(false);
-  }, [params.id]);
-
-  if (loading) {
-    return (
-      <MobileLayout showBackButton showBottomNav={false}>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" strokeWidth={2} />
-        </div>
-      </MobileLayout>
-    );
-  }
+  const jobId = params.id as string;
+  // Lookup is a synchronous, pure read of in-memory mock data — safe to
+  // compute directly during render, no loading state needed.
+  const job = React.useMemo(() => getUnifiedJobById(jobId), [jobId]);
 
   if (!job) {
     return (
