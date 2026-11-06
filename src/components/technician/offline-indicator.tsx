@@ -4,38 +4,56 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { WifiOff, CloudOff } from "lucide-react";
 
-function getInitialOnlineState(): boolean {
-  // navigator is unavailable during SSR/static generation; assume online
-  // until the client mounts and the effect below corrects it if needed.
-  return typeof navigator === "undefined" ? true : navigator.onLine;
+const RECONNECTED_BANNER_MS = 3000;
+
+function subscribeToConnectivity(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
 }
 
+const getOnlineSnapshot = () => navigator.onLine;
+// Server render (and hydration) always assume online. Don't sniff
+// `typeof navigator`: Node 21+ defines a global navigator with no onLine,
+// which made the server render the offline banner for every visitor.
+const getServerOnlineSnapshot = () => true;
+
 export function OfflineIndicator() {
-  const [isOnline, setIsOnline] = React.useState(getInitialOnlineState);
-  const [showBanner, setShowBanner] = React.useState(() => !getInitialOnlineState());
+  const isOnline = React.useSyncExternalStore(
+    subscribeToConnectivity,
+    getOnlineSnapshot,
+    getServerOnlineSnapshot,
+  );
+  const [showReconnected, setShowReconnected] = React.useState(false);
 
+  // Briefly confirm reconnection. setState only runs inside event
+  // callbacks, and the timer is cleared if connectivity flips again.
   React.useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const handleOnline = () => {
-      setIsOnline(true);
-      // Show "back online" message briefly
-      setShowBanner(true);
-      setTimeout(() => setShowBanner(false), 3000);
+      clearTimeout(timer);
+      setShowReconnected(true);
+      timer = setTimeout(() => setShowReconnected(false), RECONNECTED_BANNER_MS);
     };
-
     const handleOffline = () => {
-      setIsOnline(false);
-      setShowBanner(true);
+      clearTimeout(timer);
+      setShowReconnected(false);
     };
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
+  // Derived, so the offline banner can never be hidden while offline.
+  const showBanner = !isOnline || showReconnected;
   if (!showBanner) return null;
 
   return (

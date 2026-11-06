@@ -21,6 +21,7 @@ import {
   type ScheduleMove,
 } from "@/hooks/use-dispatch-schedule";
 import { slotIndexToTime } from "@/components/dispatch/grid-constants";
+import { useClientNow } from "@/hooks/use-client-now";
 import { TimeGrid } from "@/components/dispatch/time-grid";
 import { UnassignedQueue } from "@/components/dispatch/unassigned-queue";
 import { DragOverlayCard } from "@/components/dispatch/drag-overlay-card";
@@ -131,7 +132,9 @@ export default function DispatchPage() {
     );
   };
 
-  const today = new Date();
+  // Client-only clock: this page is statically prerendered, so a render-time
+  // `new Date()` would show the build date and break hydration.
+  const today = useClientNow();
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -151,7 +154,7 @@ export default function DispatchPage() {
             <div className="flex items-center gap-1.5 px-2">
               <CalendarDays className="h-4 w-4 text-muted-foreground" strokeWidth={2} />
               <span className="text-sm font-medium">
-                {format(today, "EEEE, MMM d")}
+                {today ? format(today, "EEEE, MMM d") : "Today"}
               </span>
             </div>
             <Button variant="ghost" size="icon" className="h-8 w-8">

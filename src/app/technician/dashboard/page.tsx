@@ -8,9 +8,10 @@ import { Job } from "@/types/job";
 import { Calendar, RefreshCw, Sun, Sunset } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useClientNow } from "@/hooks/use-client-now";
 
-function getGreeting(): { text: string; icon: React.ReactNode } {
-  const hour = new Date().getHours();
+function getGreeting(now: Date): { text: string; icon: React.ReactNode } {
+  const hour = now.getHours();
   if (hour < 12) {
     return { text: "Good morning", icon: <Sun className="h-5 w-5" strokeWidth={2} /> };
   } else if (hour < 17) {
@@ -33,8 +34,11 @@ export default function TechnicianDashboard() {
     getTodaysJobs(currentTechnician.id),
   );
   const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const greeting = getGreeting();
-  const today = new Date();
+  // Null until the client has hydrated — this page is statically
+  // prerendered, so reading the clock during render would bake in the
+  // build machine's time and timezone.
+  const now = useClientNow();
+  const greeting = now ? getGreeting(now) : null;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -70,13 +74,13 @@ export default function TechnicianDashboard() {
         {/* Welcome Header */}
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-muted-foreground">
-            {greeting.icon}
-            <span className="text-sm font-medium">{greeting.text}</span>
+            {greeting?.icon ?? <Sun className="h-5 w-5" strokeWidth={2} />}
+            <span className="text-sm font-medium">{greeting?.text ?? "Welcome back"}</span>
           </div>
           <h1 className="text-2xl font-bold">{currentTechnician.name}</h1>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="h-4 w-4" strokeWidth={2} />
-            <span className="text-sm">{formatDate(today)}</span>
+            <span className="text-sm">{now ? formatDate(now) : "Today"}</span>
           </div>
         </div>
 
