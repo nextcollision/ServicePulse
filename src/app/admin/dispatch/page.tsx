@@ -20,7 +20,11 @@ import {
   findScheduleConflict,
   type ScheduleMove,
 } from "@/hooks/use-dispatch-schedule";
-import { slotIndexToTime } from "@/components/dispatch/grid-constants";
+import {
+  slotIndexToTime,
+  exceedsGridEnd,
+  GRID_END_LABEL,
+} from "@/components/dispatch/grid-constants";
 import { useClientNow } from "@/hooks/use-client-now";
 import { TimeGrid } from "@/components/dispatch/time-grid";
 import { UnassignedQueue } from "@/components/dispatch/unassigned-queue";
@@ -98,6 +102,14 @@ export default function DispatchPage() {
     const { job, source } = activeData;
     const { technicianId, slotIndex } = overData;
     const startTime = slotIndexToTime(slotIndex);
+
+    // End-of-day guard: the job must finish within the visible grid
+    if (exceedsGridEnd(startTime, job.durationMinutes)) {
+      setConflictWarning(
+        `Can't schedule here — "${job.jobType}" runs ${job.durationMinutes} min and would end after ${GRID_END_LABEL}.`,
+      );
+      return;
+    }
 
     // Overlap guard: reject drops that collide with an existing block
     const conflict = findScheduleConflict(schedule, job, technicianId, startTime);

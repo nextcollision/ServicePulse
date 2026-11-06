@@ -53,6 +53,19 @@ export function slotIndexToTime(slotIndex: number): Date {
 }
 
 /**
+ * True if a job starting at `start` would still be running after the last
+ * visible slot ends (GRID_END_HOUR). Such a drop would render a block that
+ * hangs off the bottom of the grid, so the board rejects it.
+ */
+export function exceedsGridEnd(start: Date, durationMinutes: number): boolean {
+  const startMinutes = start.getHours() * 60 + start.getMinutes();
+  return startMinutes + durationMinutes > GRID_END_HOUR * 60;
+}
+
+/** "7:00 PM"-style label for the end of the working day on the grid. */
+export const GRID_END_LABEL = slotLabel(TOTAL_SLOTS);
+
+/**
  * How many slots does a given duration (in minutes) span?
  */
 export function durationToSlotSpan(durationMinutes: number): number {

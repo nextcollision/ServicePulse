@@ -22,7 +22,14 @@ function formatClockTime(date: Date): string {
 
 /** Flesh a grid-oriented DispatchJob out into a full Job record. */
 export function dispatchJobToJob(dj: DispatchJob): Job {
+  // Dispatch records carry no actual start/finish times, so for jobs the
+  // board says are underway or done, use the scheduled window. Without
+  // this the technician view showed in-progress jobs with a frozen 0:00
+  // timer.
+  const started = dj.status === "in-progress" || dj.status === "complete";
   return {
+    startedAt: started ? dj.scheduledStart : undefined,
+    completedAt: dj.status === "complete" ? dj.scheduledEnd : undefined,
     id: dj.id,
     jobNumber: dj.jobNumber,
     status: dispatchToJobStatus[dj.status],

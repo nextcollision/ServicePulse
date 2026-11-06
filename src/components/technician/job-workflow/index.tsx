@@ -53,7 +53,8 @@ export function JobWorkflow({ job: initialJob }: JobWorkflowProps) {
   React.useEffect(() => {
     if (initialJob.startedAt && !initialJob.completedAt) {
       const startTime = new Date(initialJob.startedAt).getTime();
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      // Clamp: a scheduled start can still be in the future.
+      const elapsed = Math.max(0, Math.floor((Date.now() - startTime) / 1000));
       // eslint-disable-next-line react-hooks/set-state-in-effect -- wall-clock-derived value, must not run during SSR
       setElapsedSeconds(elapsed);
       setIsTimerRunning(true);
